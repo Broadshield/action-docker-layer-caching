@@ -68235,7 +68235,7 @@ var _LayerCache = class {
   currentTarStoreDir = "image";
   unformattedSaveKey = "";
   restoredRootKey = "";
-  imagesDir = path2.join(__dirname, "..", ".adlc");
+  imagesDir = path2.join(process.env.GITHUB_WORKSPACE ?? __dirname, "..", ".adlc");
   enabledParallel = true;
   concurrency = 4;
   constructor(ids) {
@@ -68437,7 +68437,7 @@ var _LayerCache = class {
     await cmd.exec();
   }
   async cleanUp() {
-    await import_node_fs2.promises.rm(this.getImagesDir(), { recursive: true });
+    await import_node_fs2.promises.rm(this.getImagesDir(), { force: true, recursive: true });
   }
   getImagesDir() {
     return this.imagesDir;
