@@ -20,21 +20,24 @@ jobs:
         image: redis
         volumes:
           - /tmp/cache/redis:/data
-        environment:
+        env:
           REDIS_PORT: 6379
           REDIS_HOST: registry-redis
           REDIS_DB: 0
           REDIS_PASSWORD: "SomePass0987"
           REGISTRY_REDIS_PASSWORD: "SomePass0987"
           REDISCLI_AUTH: "SomePass0987"
-        options:  --cap-add "sys_resource" --restart always --entrypoint "redis-server --save 60 1 --loglevel warning --requirepass SomePass0987"
+        options: >-
+          --cap-add "sys_resource"
+          --restart always
+          --entrypoint "redis-server --save 60 1 --loglevel warning --requirepass SomePass0987"
       registry:
         image: registry:2
         ports:
           - "5000:5000/tcp"
         volumes:
           - /tmp/cache/registry:/var/lib/registry
-        environment:
+        env:
           REGISTRY_LOG_LEVEL: warn
           REGISTRY_PROXY_PASSWORD: ${{ github.token }}
           REGISTRY_REDIS_PASSWORD: "SomePass0987"

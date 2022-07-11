@@ -2,7 +2,6 @@ name: CI
 
 on:
   release:
-  push:
 
 jobs:
   build:
