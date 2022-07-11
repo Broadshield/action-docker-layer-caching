@@ -1,0 +1,69 @@
+volumes:
+  mount-registry:
+  mount-redis:
+  mount-config:
+networks:
+  registry-network:
+
+services:
+  registry-redis:
+    image: redis:7.0-alpine3.16
+    container_name: registry-redis
+    cap_add:
+      - "sys_resource"
+    volumes:
+      - mount-redis:/data
+    environment:
+      - REGISTRY_REDIS_PASSWORD
+      - REDISCLI_AUTH=${REGISTRY_REDIS_PASSWORD}
+      - REDIS_PORT=6379
+      - REDIS_HOST=registry-redis
+      - REDIS_DB=0
+    ports:
+      - 6379
+    networks:
+      - registry-network
+    restart: always
+    command: "redis-server --save 60 1 --loglevel warning --requirepass ${REGISTRY_REDIS_PASSWORD}"
+  registry:
+    image: registry:2
+    container_name: registry
+    volumes:
+      - mount-registry:/var/lib/registry
+      - ./volumes/config/config.yml:/etc/docker/registry/config.yml
+    networks:
+      - registry-network
+    ports:
+      - 5000:5000/tcp
+    depends_on:
+      - registry-redis
+    restart: always
+    environment:
+      REGISTRY_LOG_LEVEL: warn
+      REGISTRY_PROXY_PASSWORD: ${{ env.REGISTRY_PROXY_PASSWORD }}
+      REGISTRY_REDIS_PASSWORD: ${{ env.REGISTRY_REDIS_PASSWORD }}
+      REGISTRY_PROXY_REMOTEURL: https://ghcr.io
+      REGISTRY_PROXY_USERNAME: $
+      REGISTRY_REDIS_ADDR: registry-redis:6379
+      REGISTRY_REDIS_DB: 0
+      REGISTRY_REDIS_DIALTIMEOUT: 100ms
+      REGISTRY_REDIS_READTIMEOUT: 100ms
+      REGISTRY_REDIS_WRITETIMEOUT: 100ms
+      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
+      REGISTRY_STORAGE_CACHE_BLOBDESCRIPTOR: redis
+      REGISTRY_REDIRECT_DISABLE: true
+
+
+x-mutagen:
+  sync:
+    defaults:
+      ignore:
+        vcs: true
+      mode: "two-way-resolved"
+    mount-registry:
+      alpha: "./volumes/registry"
+      beta: "volume://mount-registry"
+    mount-redis:
+      alpha: "./volumes/redis_data"
+      beta: "volume://mount-redis"
+

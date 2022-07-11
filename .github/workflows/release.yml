@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - '**'
-  pull_request:
   delete:
 
 defaults:
@@ -14,29 +13,89 @@ defaults:
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    env:
+      DEFAULT_BRANCH: master
     steps:
-      - uses: actions/setup-node@v1
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
         with:
-          node-version: 12.x
+          node-version: 16
+          cache: yarn
 
-      - uses: actions/checkout@v2
-
+      - name: Yarn Cache
+        uses: actions/cache@v3
+        continue-on-error: true
+        with:
+          path: .yarn/cache
+          key: ${{ runner.os }}-${{hashFiles('./yarn.lock')}}
+          restore-keys: |
+            ${{ runner.os }}-${{hashFiles('./yarn.lock')}}
+            ${{ runner.os }}-
+      - name: Set Git User Details
+        run: |
+          git config user.name "${GITHUB_USER:-github-actions}"
+          git config user.email "${GITHUB_EMAIL:-github-actions@@users.noreply.github.com}"
       - name: Output info
         id: info
         run: |
-          if [ '${{ github.event_name }}' = 'pull_request' ]; then
+          if [[ '${{ github.event_name }}' == 'pull_request' ]]; then
             echo '::set-output name=commit_message::'
             exit 0
           fi
           echo '::set-output name=commit_message::[auto]'
 
-      - uses: satackey/push-prebuilt-action@v0.2.0-beta3
-        with:
-          commit-message: ${{ steps.info.outputs.commit_message }}
-          push-branch: '{branch}-release'
 
-      - uses: actions/upload-artifact@v2
+      - name: Yarn Install
+        id: install
+        run: |
+          yarn install
+
+      - name: Yarn Test
+        id: unit_test
+        run: |
+          yarn test
+      - name: Yarn Build
+        id: build
+        run: |
+          yarn build
+      - name: Yarn Bump
+        id: bump
+        run: |
+          if [[ "${GITHUB_REF#refs/heads/}" == "${DEFAULT_BRANCH}" ]]; then
+            yarn version -i patch
+            echo "::set-output name=release_type::Patch"
+            else
+            yarn version -i prerelease
+            echo "::set-output name=release_type::Prerelease"
+          fi
+          echo "::set-output name=version::$(yarn current-version)"
+      - name: Git Commit Bump
+        id: commit_bump
+        run: |
+          COMMIT_MESSAGE="${{ steps.bump.outputs.release_type}} v${{ steps.bump.outputs.version }} ${{ steps.info.outputs.commit_message }}"
+          git add dist .yarn package.json
+          git commit -m "chore(autorelease): ${COMMIT_MESSAGE}'
+          git push -f
+          echo "::set-output name=commit_sha::$(git rev-parse HEAD)"
+          echo "::set-output name=message::${RELEASE_MESSAGE}"
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          release_branches: "${DEFAULT_BRANCH}"
+          custom_tag: v${{ steps.bump.outputs.version }}
+          commit_sha: ${{ steps.commit_bump.outputs.commit_sha }}
+
+      - name: Create a GitHub release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ steps.tag_version.outputs.new_tag }}
+          name: Release ${{ steps.tag_version.outputs.new_tag }}
+          body: ${{ steps.tag_version.outputs.changelog }}
+
+      - uses: actions/upload-artifact@v3
         if: github.event_name != 'delete'
         with:
           name: built
@@ -44,7 +103,7 @@ jobs:
 
       - name: Output matrix
         id: set_matrix
-        uses: actions/github-script@v2
+        uses: actions/github-script@v3
         with:
           script: |
             return {
@@ -69,7 +128,7 @@ jobs:
                 }, {
                   inspect_image: 'nothing',
                   os: 'ubuntu-latest',
-                  prepare_command: 'docker tag node:12 nothing',
+                  prepare_command: 'docker tag node:16-alpine nothing',
                   build_command: ':',
                 }, {
                   inspect_image: 'nothing',
@@ -99,12 +158,12 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - run: ${{ matrix.prepare_command }}
 
       - name: Download action
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: built
           path: action-dlc
@@ -123,7 +182,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - run: ${{ matrix.prepare_command }}
 
@@ -133,7 +192,7 @@ jobs:
           echo "##[set-output name=branch;]${GITHUB_REF#refs/heads/}"
 
       - name: Download action
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: built
           path: action-dlc

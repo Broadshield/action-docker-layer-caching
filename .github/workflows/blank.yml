@@ -2,13 +2,15 @@ name: CI
 
 on:
   release:
+  push:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/github-script@v2
+      - uses: actions/github-script@v6
         with:
+          result-encoding: string
           script: |
             core.info('ref: ${{ github.ref }}, sha: ${{ github.sha }}')
             core.info(JSON.stringify('${{ toJSON(github) }}', null, 2))
