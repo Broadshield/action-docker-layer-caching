@@ -63,7 +63,8 @@ jobs:
           tmp_file=$(mktemp)
           jq '."insecure-registries" = ["127.0.0.1:5000"] | ."registry-mirrors" = [ "http://127.0.0.1:5000" ]' /etc/docker/daemon.json | tee "${tmp_file}" && sudo mv "${tmp_file}" /etc/docker/daemon.json
           sudo systemctl restart docker
-          docker exec -it registry-redis redis-cli save
+          docker ps
+          # docker exec -it registry-redis redis-cli save
 
 
       - name: Docker meta
