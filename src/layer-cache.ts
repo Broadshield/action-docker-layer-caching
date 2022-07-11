@@ -20,7 +20,7 @@ class LayerCache {
 
   restoredRootKey = '';
 
-  imagesDir: string = path.join(__dirname, '..', '.adlc');
+  imagesDir: string = path.join(process.env.GITHUB_WORKSPACE ?? __dirname , '..', '.adlc');
 
   enabledParallel = true;
 
@@ -345,7 +345,7 @@ return true;
   }
 
   async cleanUp(): Promise<void> {
-    await fs.rm(this.getImagesDir(), { recursive: true });
+    await fs.rm(this.getImagesDir(), {force: true, recursive: true });
   }
 
   // ---
