@@ -24,10 +24,10 @@ jobs:
           REDIS_PORT: 6379
           REDIS_HOST: registry-redis
           REDIS_DB: 0
-          REDIS_PASSWORD: ${{ env.REGISTRY_REDIS_PASSWORD }}
-          REGISTRY_REDIS_PASSWORD: ${{ env.REGISTRY_REDIS_PASSWORD }}
-          REDISCLI_AUTH: ${{ env.REGISTRY_REDIS_PASSWORD }}
-        options:  --cap-add "sys_resource" --restart always --entrypoint "redis-server --save 60 1 --loglevel warning --requirepass ${{ env.REGISTRY_REDIS_PASSWORD }}"
+          REDIS_PASSWORD: "SomePass0987"
+          REGISTRY_REDIS_PASSWORD: "SomePass0987"
+          REDISCLI_AUTH: "SomePass0987"
+        options:  --cap-add "sys_resource" --restart always --entrypoint "redis-server --save 60 1 --loglevel warning --requirepass SomePass0987"
       registry:
         image: registry:2
         ports:
@@ -36,8 +36,8 @@ jobs:
           - ${{ env.REGISTRY_VOLUME }}:/var/lib/registry
         environment:
           REGISTRY_LOG_LEVEL: warn
-          REGISTRY_PROXY_PASSWORD: ${{ env.REGISTRY_PROXY_PASSWORD }}
-          REGISTRY_REDIS_PASSWORD: ${{ env.REGISTRY_REDIS_PASSWORD }}
+          REGISTRY_PROXY_PASSWORD: ${{ github.token }}
+          REGISTRY_REDIS_PASSWORD: "SomePass0987"
           REGISTRY_PROXY_REMOTEURL: https://ghcr.io
           REGISTRY_PROXY_USERNAME: $
           REGISTRY_REDIS_ADDR: registry-redis:6379
@@ -48,7 +48,7 @@ jobs:
           REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
           REGISTRY_STORAGE_CACHE_BLOBDESCRIPTOR: redis
           REGISTRY_REDIRECT_DISABLE: true
-          REGISTRY_HTTP_SECRET: ${{ env.REGISTRY_REDIS_PASSWORD }}
+          REGISTRY_HTTP_SECRET: "SomePass0987"
           REGISTRY_HTTP_HTTP2_DISABLED: false
 
     steps:
