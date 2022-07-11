@@ -30,7 +30,6 @@ jobs:
         options: >-
           --cap-add "sys_resource"
           --restart always
-          --entrypoint "redis-server --save 60 1 --loglevel warning --requirepass SomePass0987"
       registry:
         image: registry:2
         ports:
