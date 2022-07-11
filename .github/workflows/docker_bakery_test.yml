@@ -19,7 +19,7 @@ jobs:
       registry-redis:
         image: redis
         volumes:
-          - ${{ env.REGISTRY_VOLUME }}:/data
+          - /tmp/cache/redis:/data
         environment:
           REDIS_PORT: 6379
           REDIS_HOST: registry-redis
@@ -33,7 +33,7 @@ jobs:
         ports:
           - "5000:5000/tcp"
         volumes:
-          - ${{ env.REGISTRY_VOLUME }}:/var/lib/registry
+          - /tmp/cache/registry:/var/lib/registry
         environment:
           REGISTRY_LOG_LEVEL: warn
           REGISTRY_PROXY_PASSWORD: ${{ github.token }}
