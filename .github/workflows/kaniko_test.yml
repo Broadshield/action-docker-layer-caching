@@ -39,13 +39,14 @@ jobs:
           if [[ -z ${CACHE_IMAGE_REGISTRY} ]] && [[ "${IMAGE_REGISTRY}" == *"ghcr.io"* ]]; then
             CACHE_IMAGE_REGISTRY="${IMAGE_REGISTRY}${GITHUB_REPOSITORY}/cache"
           fi
+          mkdir -p cache
           echo "CACHE_IMAGE_REGISTRY=$(tr '[:upper:]' '[:lower:]' <<<"${CACHE_IMAGE_REGISTRY}")" >> "${GITHUB_ENV}"
           echo "IMAGE_ID=$(tr '[:upper:]' '[:lower:]' <<<"${IMAGE_REGISTRY}${GITHUB_REPOSITORY}")" >> "${GITHUB_ENV}"
       - name: Cache Kaniko Layers
         id: cache-kaniko
         uses: actions/cache@v3
         with:
-          path: ${{ github.workspace }}/cache
+          path: cache
           key: ${{ runner.os }}-kaniko-${{env.IMAGE_ID}}-${{github.sha}}
           restore-keys: |
             ${{ runner.os }}-kaniko-${{env.IMAGE_ID}}-${{github.sha}}
