@@ -29,8 +29,10 @@ jobs:
         env:
           SOURCE_REPO: ${{ github.workspace }}/${{ steps.repo.outputs.name }}
         run: |
-          echo "IMAGE_REGISTRY=${IMAGE_REGISTRY%/}/" >> "${GITHUB_ENV}"
-          echo "KANIKO_CONFIG_PATH=${SOURCE_REPO}/.github/kaniko/config.json" >> "${GITHUB_ENV}"
+          IMAGE_REGISTRY="${IMAGE_REGISTRY%/}/"
+          echo "IMAGE_REGISTRY=${IMAGE_REGISTRY}" >> "${GITHUB_ENV}"
+          KANIKO_CONFIG_PATH="${SOURCE_REPO}/.github/kaniko/config.json"
+          echo "KANIKO_CONFIG_PATH=${KANIKO_CONFIG_PATH}" >> "${GITHUB_ENV}"
           KANIKO_AUTH="$(printf '%s:%s' "${IMAGE_REGISTRY_USERNAME}" "${IMAGE_REGISTRY_PASSWORD}" | base64)"
           KANIKO_CONFIG_TEMP=$(mktemp)
           jq --arg a "${IMAGE_REGISTRY}" --arg b "${KANIKO_AUTH}" '.auths[$a].auth = $b' "${KANIKO_CONFIG_PATH}" > "${KANIKO_CONFIG_TEMP}"
