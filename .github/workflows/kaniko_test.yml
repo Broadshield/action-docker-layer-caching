@@ -48,7 +48,6 @@ jobs:
           docker run --rm \
             -v $(pwd):/workspace \
             gcr.io/kaniko-project/warmer:latest \
-            --registry-mirror="https://ghcr.io" \
             --cache-dir=/workspace/cache \
             --image=ubuntu
       - name: Run Build
@@ -58,7 +57,6 @@ jobs:
             -v "${KANIKO_CONFIG_PATH}":/kaniko/.docker/config.json:ro \
             -v $(pwd):/workspace \
             gcr.io/kaniko-project/executor:latest \
-            --registry-mirror="https://ghcr.io" \
             --dockerfile="/workspace/${DOCKERFILE_PATH}" \
             --cache \
             --cache-copy-layers \
