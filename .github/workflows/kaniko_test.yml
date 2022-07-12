@@ -72,7 +72,6 @@ jobs:
             -v "${KANIKO_CONFIG_PATH}":/kaniko/.docker/config.json:ro \
             -v $(pwd):/workspace \
             gcr.io/kaniko-project/executor:latest \
-            --registry-mirror="https://ghcr.io" \
             --dockerfile="/workspace/${DOCKERFILE_PATH}" \
             --use-new-run \
             --cache \
