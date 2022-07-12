@@ -43,9 +43,11 @@ jobs:
           echo "CACHE_IMAGE_REGISTRY=$(tr '[:upper:]' '[:lower:]' <<<"${CACHE_IMAGE_REGISTRY}")" >> "${GITHUB_ENV}"
           echo "IMAGE_ID=$(tr '[:upper:]' '[:lower:]' <<<"${IMAGE_REGISTRY}${GITHUB_REPOSITORY}")" >> "${GITHUB_ENV}"
       - name: Create Cache Dir
+        id: cache
         run: |
           mkdir -p cache
           chmod -R 777 cache
+          echo "::set-output name=dir::$(pwd)/cache"
       - name: pull executor
         run: |
           docker pull --quiet gcr.io/kaniko-project/executor:latest
@@ -53,7 +55,7 @@ jobs:
         id: cache-kaniko
         uses: actions/cache@v3
         with:
-          path: ./cache
+          path: ${{ steps.cache.outputs.dir }}
           key: ${{ runner.os }}-kaniko-${{env.IMAGE_ID}}-${{github.sha}}
           restore-keys: |
             ${{ runner.os }}-kaniko-${{env.IMAGE_ID}}-${{github.sha}}
@@ -66,12 +68,13 @@ jobs:
           docker run --rm \
             -v "${KANIKO_CONFIG_PATH}":/kaniko/.docker/config.json:ro \
             -v $(pwd):/workspace \
+            -v "${{ steps.cache.outputs.dir }}:/cache:rw" \
             gcr.io/kaniko-project/executor:latest \
             --dockerfile="/workspace/${DOCKERFILE_PATH}" \
             --use-new-run \
             --cache-copy-layers \
             --cache \
-            --cache-dir=/workspace/cache \
+            --cache-dir=/cache \
             --cache-repo="${CACHE_IMAGE_REGISTRY}" \
             --destination="${IMAGE_ID}:${GITHUB_SHA}" \
             --context "dir:///workspace/$(dirname "${DOCKERFILE_PATH}")"
@@ -82,12 +85,13 @@ jobs:
           docker run --rm \
             -v "${KANIKO_CONFIG_PATH}":/kaniko/.docker/config.json:ro \
             -v $(pwd):/workspace \
+            -v "${{ steps.cache.outputs.dir }}:/cache:rw" \
             gcr.io/kaniko-project/executor:latest \
             --dockerfile="/workspace/${DOCKERFILE_PATH}" \
             --use-new-run \
             --cache-copy-layers \
             --cache \
-            --cache-dir=/workspace/cache \
+            --cache-dir=/cache \
             --destination="${IMAGE_ID}:${GITHUB_SHA}" \
             --context "dir:///workspace/$(dirname "${DOCKERFILE_PATH}")"
 
@@ -98,12 +102,13 @@ jobs:
           docker run --rm \
             -v "${KANIKO_CONFIG_PATH}":/kaniko/.docker/config.json:ro \
             -v $(pwd):/workspace:rw \
+            -v "${{ steps.cache.outputs.dir }}:/cache:rw" \
             gcr.io/kaniko-project/executor:latest \
             --dockerfile="/workspace/${DOCKERFILE_PATH}" \
             --use-new-run \
             --cache \
             --cache-copy-layers \
-            --cache-dir=/workspace/cache \
+            --cache-dir=/cache \
             --cache-repo="${CACHE_IMAGE_REGISTRY}" \
             --destination="${IMAGE_ID}:ubuntu_${GITHUB_SHA}" \
             --context "dir:///workspace/$(dirname "${DOCKERFILE_PATH}")"
@@ -115,12 +120,13 @@ jobs:
           docker run --rm \
             -v "${KANIKO_CONFIG_PATH}":/kaniko/.docker/config.json:ro \
             -v $(pwd):/workspace:rw \
+            -v "${{ steps.cache.outputs.dir }}:/cache:rw" \
             gcr.io/kaniko-project/executor:latest \
             --dockerfile="/workspace/${DOCKERFILE_PATH}" \
             --use-new-run \
             --cache \
             --cache-copy-layers \
-            --cache-dir=/workspace/cache \
+            --cache-dir=/cache \
             --destination="${IMAGE_ID}:ubuntu_${GITHUB_SHA}" \
             --context "dir:///workspace/$(dirname "${DOCKERFILE_PATH}")"
       - name: Check Filesystem Cache
