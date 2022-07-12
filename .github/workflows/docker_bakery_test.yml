@@ -65,6 +65,9 @@ jobs:
           sudo systemctl restart docker
           docker ps
           # docker exec -it registry-redis redis-cli save
+          echo "# Docker Registry Redis: ${GITHUB_WORKFLOW}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "Env vars:"
+          env
 
 
       - name: Docker meta

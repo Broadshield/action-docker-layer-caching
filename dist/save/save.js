@@ -67968,8 +67968,11 @@ var CommandOutput = class {
 var CommandHelper = class {
   command;
   args;
+  options;
   workingDirectory;
-  constructor(workingDirectory, command, arguments_) {
+  constructor(workingDirectory, command, arguments_, options) {
+    this.workingDirectory = workingDirectory;
+    this.options = options;
     if (command) {
       if (arguments_ === void 0) {
         const parseWords = (words = "") => (words.match(/[^\s"]+|"([^"]*)"/gi) || []).map((word) => word.replace(/^"(.+(?="$))"$/, "$1"));
@@ -67986,7 +67989,6 @@ var CommandHelper = class {
       this.command = void 0;
       this.args = void 0;
     }
-    this.workingDirectory = workingDirectory;
   }
   async exec(allowAllExitCodes = false) {
     const result = new CommandOutput();
@@ -68008,7 +68010,8 @@ var CommandHelper = class {
           stderr: (data) => {
             stderr.push(data.toString());
           }
-        }
+        },
+        ...this.options
       };
       result.exitCode = await exec.exec(`"${this.command}"`, this.args, options);
       result.stdout = stdout.join("").trim();
@@ -68235,11 +68238,16 @@ var _LayerCache = class {
   currentTarStoreDir = "image";
   unformattedSaveKey = "";
   restoredRootKey = "";
-  imagesDir = path2.join(process.env.GITHUB_WORKSPACE ?? __dirname, "..", ".adlc");
+  imagesDir;
   enabledParallel = true;
   concurrency = 4;
   constructor(ids) {
     this.ids = ids;
+    this.imagesDir = path2.join(process.env.GITHUB_WORKSPACE ?? __dirname, "..", ".adlc");
+    this.createOutputDirectory(this.imagesDir);
+  }
+  async createOutputDirectory(output) {
+    return import_node_fs2.promises.mkdir(output, { mode: "0o755", recursive: true });
   }
   async store(key) {
     this.unformattedSaveKey = key;
@@ -68255,7 +68263,7 @@ var _LayerCache = class {
     return true;
   }
   async saveImageAsUnpacked() {
-    await import_node_fs2.promises.mkdir(this.getUnpackedTarDir(), { recursive: true });
+    await this.createOutputDirectory(this.getUnpackedTarDir());
     const saveArgumentArray = await this.makeRepotagsDockerSaveArgReady(this.ids);
     const saveArgument = saveArgumentArray.join(`' '`);
     const result = await new CommandHelper(this.getUnpackedTarDir(), "bash", [

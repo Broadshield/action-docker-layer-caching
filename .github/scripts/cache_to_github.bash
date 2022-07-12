@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 export DOCKER_REGISTRY="ghcr.io"
+export CACHE_IMAGE_REGISTRY="${DOCKER_REGISTRY}/${GITHUB_REPOSITORY_OWNER:-Broadshield}"
 
 docker rmi -f b48aa2e90c0a 2>/dev/null || true
 IMAGE_ID="${DOCKER_REGISTRY:-localhost:5000}/${GITHUB_REPOSITORY_OWNER:-Broadshield}/${IMAGE_NAME:-node:16-alpine}"

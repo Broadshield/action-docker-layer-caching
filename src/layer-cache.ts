@@ -2,7 +2,7 @@ import * as cache from '@actions/cache';
 import * as core from '@actions/core';
 import PromisePool from 'native-promise-pool';
 import crypto from 'node:crypto';
-import { promises as fs } from 'node:fs';
+import { PathLike, promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import recursiveReaddir from 'recursive-readdir';
 import format from 'string-format';
@@ -20,7 +20,7 @@ class LayerCache {
 
   restoredRootKey = '';
 
-  imagesDir: string = path.join(process.env.GITHUB_WORKSPACE ?? __dirname , '..', '.adlc');
+  imagesDir: string;
 
   enabledParallel = true;
 
@@ -32,6 +32,12 @@ class LayerCache {
 
   constructor(ids: string[]) {
     this.ids = ids;
+    this.imagesDir = path.join(process.env.GITHUB_WORKSPACE ?? __dirname , '..', '.adlc');
+    this.createOutputDirectory(this.imagesDir);
+  }
+
+  async createOutputDirectory(output: PathLike): Promise<string|undefined> {
+    return fs.mkdir(output, { mode: '0o755', recursive: true });
   }
 
   async store(key: string): Promise<boolean> {
@@ -52,7 +58,7 @@ class LayerCache {
   }
 
   private async saveImageAsUnpacked(): Promise<number> {
-    await fs.mkdir(this.getUnpackedTarDir(), { recursive: true });
+    await this.createOutputDirectory(this.getUnpackedTarDir());
     const saveArgumentArray = await this.makeRepotagsDockerSaveArgReady(
       this.ids
     );

@@ -1,0 +1,64 @@
+name: 'Kaniko Test'
+on:
+  push:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_BUILDKIT: 1
+      DOCKER_REGISTRY: "ghcr.io"
+      REGISTRY_REDIS_PASSWORD: "SomePass0987"
+      REDIS_PASSWORD: "SomePass0987"
+      REGISTRY_PROXY_PASSWORD: ${{ github.token }}
+      REGISTRY_VOLUME: /tmp/cache/registry
+      REDIS_VOLUME: /tmp/cache/redis
+    permissions:
+      packages: write
+      contents: read
+      actions: read
+
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          path: ./action-docker-layer-caching
+      - name: Warm up Kaniko
+        if: false
+        shell: bash
+        run: |
+          docker run --rm \
+            -v $(pwd):/workspace \
+            gcr.io/kaniko-project/warmer:latest \
+            --cache-dir=/workspace/cache \
+            --image=ubuntu
+      - name: Run Build
+        shell: bash
+        env:
+          IMAGE_REGISTRY: ${{ inputs.registry || 'https://ghcr.io/v2/' }}
+          IMAGE_REGISTRY_USERNAME: ${{ inputs.registry_username || '$' }}
+          IMAGE_REGISTRY_PASSWORD: ${{ inputs.registry_password || github.token }}
+          CACHE_IMAGE_REGISTRY: ${{ inputs.cache_image_registry  }}
+          IMAGE_DESTINATION: ${{ inputs.image_destination }}
+        run: |
+          env
+          export KANIKO_CONFIG_PATH="$(pwd)/action-docker-layer-caching/.github/kaniko/config/config.json"
+          export KANIKO_AUTH="$(printf '%s:%s' "${IMAGE_REGISTRY_USERNAME}" "${IMAGE_REGISTRY_PASSWORD}" | base64)"
+          KANIKO_CONFIG_TEMP=$(mktemp)
+          jq --arg a "${IMAGE_REGISTRY}" --arg b "${KANIKO_AUTH}" '.auths[$a].auth = $b' "${KANIKO_CONFIG_PATH}" > "${KANIKO_CONFIG_TEMP}"
+          mv "${KANIKO_CONFIG_TEMP}" "${KANIKO_CONFIG_PATH}"
+          if [[ -z ${CACHE_IMAGE_REGISTRY} ]] && [[ "${IMAGE_REGISTRY}" == *"ghcr.io"* ]]; then
+            CACHE_IMAGE_REGISTRY="${IMAGE_REGISTRY}/${GITHUB_REPOSITORY}:cache"
+          fi
+          export CACHE_IMAGE_REGISTRY=$(tr '[:upper:]' '[:lower:]' <<<"${CACHE_IMAGE_REGISTRY}")
+          IMAGE_ID="${IMAGE_REGISTRY}/${GITHUB_REPOSITORY}:$GITHUB_SHA"
+          docker run --rm \
+            -v "${KANIKO_CONFIG_PATH}":/kaniko/.docker/config.json:ro \
+            -v $(pwd):/workspace \
+            gcr.io/kaniko-project/executor:latest \
+            --dockerfile=/workspace/action-docker-layer-caching/test_project/Dockerfile \
+            --cache \
+            --cache-copy-layers \
+            --cache-dir=/workspace/cache \
+            --cache-repo=${CACHE_IMAGE_REGISTRY} \
+            --destination=${IMAGE_ID} \
+            --context dir:///workspace/action-docker-layer-caching/test_project

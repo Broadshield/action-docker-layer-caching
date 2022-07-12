@@ -1,5 +1,5 @@
 import * as exec from '@actions/exec';
-
+import { ExecOptions } from '@actions/exec/lib/interfaces'
 import { CommandOutput } from './command-output';
 
 interface EnvironmentVariable {
@@ -10,15 +10,20 @@ export class CommandHelper {
   private command: string | undefined;
 
   private args: string[] | undefined;
+  private options: ExecOptions | undefined;
 
   private workingDirectory: string;
 
   constructor(
     workingDirectory: string,
     command: string | undefined,
-    arguments_: string[] | undefined
+    arguments_: string[] | undefined,
+     options?: ExecOptions
   ) {
+    this.workingDirectory = workingDirectory;
+    this.options = options;
     if (command) {
+
       if (arguments_ === undefined) {
         // const cmdArr = command.match(/[^\s"]+|"([^"]*)"/gi)
         const parseWords = (words = ''): string[] =>
@@ -39,7 +44,7 @@ export class CommandHelper {
       this.command = undefined;
       this.args = undefined;
     }
-    this.workingDirectory = workingDirectory;
+
   }
 
   async exec(allowAllExitCodes = false): Promise<CommandOutput> {
@@ -53,7 +58,7 @@ export class CommandHelper {
       const stdout: string[] = [];
       const stderr: string[] = [];
 
-      const options = {
+      const options: ExecOptions = {
         cwd: this.workingDirectory,
         env: environment,
         ignoreReturnCode: allowAllExitCodes,
@@ -64,7 +69,8 @@ export class CommandHelper {
           stderr: (data: Buffer) => {
             stderr.push(data.toString());
           }
-        }
+        },
+        ...this.options
       };
 
       result.exitCode = await exec.exec(
