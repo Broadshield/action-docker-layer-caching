@@ -39,6 +39,7 @@ jobs:
           if [[ -z ${CACHE_IMAGE_REGISTRY} ]] && [[ "${IMAGE_REGISTRY}" == *"ghcr.io"* ]]; then
             CACHE_IMAGE_REGISTRY="${IMAGE_REGISTRY}${GITHUB_REPOSITORY}/cache"
           fi
+          docker pull gcr.io/kaniko-project/executor:latest
           mkdir -p cache
           echo "CACHE_IMAGE_REGISTRY=$(tr '[:upper:]' '[:lower:]' <<<"${CACHE_IMAGE_REGISTRY}")" >> "${GITHUB_ENV}"
           echo "IMAGE_ID=$(tr '[:upper:]' '[:lower:]' <<<"${IMAGE_REGISTRY}${GITHUB_REPOSITORY}")" >> "${GITHUB_ENV}"
@@ -53,7 +54,7 @@ jobs:
             ${{ runner.os }}-kaniko-${{env.IMAGE_ID}}-
             ${{ runner.os }}-kaniko-
 
-      - name: Run Build
+      - name: Run Build 1
         shell: bash
         run: |
           docker run --rm \
@@ -68,8 +69,24 @@ jobs:
             --destination="${IMAGE_ID}:${GITHUB_SHA}" \
             --context "dir:///workspace/$(dirname "${DOCKERFILE_PATH}")"
 
-          DOCKERFILE_PATH="${DOCKERFILE_PATH}.ubuntu"
+      - name: Run Build 3
+        shell: bash
+        run: |
+          docker run --rm \
+            -v "${KANIKO_CONFIG_PATH}":/kaniko/.docker/config.json:ro \
+            -v $(pwd):/workspace \
+            gcr.io/kaniko-project/executor:latest \
+            --dockerfile="/workspace/${DOCKERFILE_PATH}" \
+            --use-new-run \
+            --cache \
+            --cache-dir=/workspace/cache \
+            --destination="${IMAGE_ID}:${GITHUB_SHA}" \
+            --context "dir:///workspace/$(dirname "${DOCKERFILE_PATH}")"
 
+      - name: Run Build 3
+        shell: bash
+        run: |
+          DOCKERFILE_PATH="${DOCKERFILE_PATH}.ubuntu"
           docker run --rm \
             -v "${KANIKO_CONFIG_PATH}":/kaniko/.docker/config.json:ro \
             -v $(pwd):/workspace \
