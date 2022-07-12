@@ -29,6 +29,8 @@ jobs:
         env:
           SOURCE_REPO: ${{ github.workspace }}/${{ steps.repo.outputs.name }}
         run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
+          cat ~/.docker/config.json
           IMAGE_REGISTRY="${IMAGE_REGISTRY%/}/"
           echo "IMAGE_REGISTRY=${IMAGE_REGISTRY}" >> "${GITHUB_ENV}"
           KANIKO_CONFIG_PATH="${SOURCE_REPO}/.github/kaniko/config.json"
