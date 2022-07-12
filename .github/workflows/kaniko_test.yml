@@ -1,15 +1,14 @@
-name: 'Kaniko Test'
+name: "Kaniko Test"
 on:
   push:
 jobs:
-  test:
+  kaniko-test:
     runs-on: ubuntu-latest
     permissions:
       packages: write
       contents: read
       actions: read
     env:
-      SOURCE_REPO: ${{ github.workspace }}/${{ steps.repo.outputs.name }}
       IMAGE_REGISTRY: ${{ inputs.registry || 'ghcr.io' }}
       IMAGE_REGISTRY_USERNAME: ${{ inputs.registry_username || '$' }}
       IMAGE_REGISTRY_PASSWORD: ${{ inputs.registry_password || github.token }}
@@ -27,6 +26,8 @@ jobs:
         with:
           path: ${{ github.workspace }}/${{ steps.repo.outputs.name }}
       - name: Set Up Environment
+        env:
+          SOURCE_REPO: ${{ github.workspace }}/${{ steps.repo.outputs.name }}
         run: |
           echo "IMAGE_REGISTRY=${IMAGE_REGISTRY%/}/" >> "${GITHUB_ENV}"
           echo "KANIKO_CONFIG_PATH=${SOURCE_REPO}/.github/kaniko/config.json" >> "${GITHUB_ENV}"
