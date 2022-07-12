@@ -4,14 +4,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      DOCKER_BUILDKIT: 1
-      DOCKER_REGISTRY: "ghcr.io"
-      REGISTRY_REDIS_PASSWORD: "SomePass0987"
-      REDIS_PASSWORD: "SomePass0987"
-      REGISTRY_PROXY_PASSWORD: ${{ github.token }}
-      REGISTRY_VOLUME: /tmp/cache/registry
-      REDIS_VOLUME: /tmp/cache/redis
     permissions:
       packages: write
       contents: read
@@ -54,13 +46,12 @@ jobs:
           docker run --rm \
             -v $(pwd):/workspace \
             gcr.io/kaniko-project/warmer:latest \
+            --registry-mirror="https://ghcr.io" \
             --cache-dir=/workspace/cache \
             --image=ubuntu
       - name: Run Build
         shell: bash
         run: |
-
-
           docker run --rm \
             -v "${KANIKO_CONFIG_PATH}":/kaniko/.docker/config.json:ro \
             -v $(pwd):/workspace \
