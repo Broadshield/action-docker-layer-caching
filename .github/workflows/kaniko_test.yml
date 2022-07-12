@@ -41,7 +41,7 @@ jobs:
           IMAGE_DESTINATION: ${{ inputs.image_destination }}
         run: |
           env
-          export KANIKO_CONFIG_PATH="$(pwd)/action-docker-layer-caching/.github/kaniko/config/config.json"
+          export KANIKO_CONFIG_PATH="$(pwd)/action-docker-layer-caching/.github/kaniko/config.json"
           export KANIKO_AUTH="$(printf '%s:%s' "${IMAGE_REGISTRY_USERNAME}" "${IMAGE_REGISTRY_PASSWORD}" | base64)"
           KANIKO_CONFIG_TEMP=$(mktemp)
           jq --arg a "${IMAGE_REGISTRY}" --arg b "${KANIKO_AUTH}" '.auths[$a].auth = $b' "${KANIKO_CONFIG_PATH}" > "${KANIKO_CONFIG_TEMP}"
