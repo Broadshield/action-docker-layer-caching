@@ -37,7 +37,7 @@ jobs:
           echo "KANIKO_CONFIG_PATH=${KANIKO_CONFIG_PATH}" >> "${GITHUB_ENV}"
           cp -f ~/.docker/config.json "${KANIKO_CONFIG_PATH}"
           if [[ -z ${CACHE_IMAGE_REGISTRY} ]] && [[ "${IMAGE_REGISTRY}" == *"ghcr.io"* ]]; then
-            CACHE_IMAGE_REGISTRY="${IMAGE_REGISTRY}${GITHUB_REPOSITORY}:cache"
+            CACHE_IMAGE_REGISTRY="${IMAGE_REGISTRY}${GITHUB_REPOSITORY}/cache"
           fi
           echo "CACHE_IMAGE_REGISTRY=$(tr '[:upper:]' '[:lower:]' <<<"${CACHE_IMAGE_REGISTRY}")" >> "${GITHUB_ENV}"
           echo "IMAGE_ID=$(tr '[:upper:]' '[:lower:]' <<<"${IMAGE_REGISTRY}${GITHUB_REPOSITORY}")" >> "${GITHUB_ENV}"
@@ -58,6 +58,7 @@ jobs:
             -v $(pwd):/workspace \
             gcr.io/kaniko-project/executor:latest \
             --dockerfile="/workspace/${DOCKERFILE_PATH}" \
+            --use-new-run \
             --cache \
             --cache-copy-layers \
             --cache-dir=/workspace/cache \
@@ -73,6 +74,7 @@ jobs:
             gcr.io/kaniko-project/executor:latest \
             --registry-mirror="https://ghcr.io" \
             --dockerfile="/workspace/${DOCKERFILE_PATH}" \
+            --use-new-run \
             --cache \
             --cache-copy-layers \
             --cache-dir=/workspace/cache \
