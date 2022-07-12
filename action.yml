@@ -1,33 +1,62 @@
-name: Docker Layer Caching
-description: Cache images created between main run and post run
+name: Docker Layer Caching with Precise Filtering [2022-07-06]
+description: |
+  Cache images created between main run and post run that match a filter.
+
+  [**Usage limits and eviction policy**](https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#matching-a-cache-key)
+  GitHub will remove any cache entries that have not been accessed in over 7 days. There is no limit on the number of caches you can store, but the total size of all caches in a repository is limited to 10 GB.
+
+  If you exceed the limit, GitHub will save the new cache but will begin evicting caches until the total size is less than the repository limit.
 
 branding:
   icon: layers
-  color: blue
+  color: green
 
 inputs:
+  github-token:
+    description: |
+      The GitHub access token for the user or bot that is running the workflow.
+      Required for using the GitHub package Manager as a docker cache
+      [**Getting a token**](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/authenticating-with-the-github-runner-api#getting-a-token)
+    required: false
+    type: string
+    default: ${{ github.token }}
   key:
     description: An explicit key for restoring and saving the cache
     required: true
-    default: docker-layer-caching-${{ github.workflow }}-{hash}
+    default: docker-layer-caching-${{ github.workflow }}-${{ github.head_ref || github.ref }}-${{ github.event_name }}-{hash}
   restore-keys:
     description: An ordered list of keys to use for restoring the cache if no cache hit occurred for key
     required: false
-    default: docker-layer-caching-${{ github.workflow }}-
+    default: |
+      docker-layer-caching-${{ github.workflow }}-${{ github.head_ref || github.ref }}-${{ github.event_name }}-{hash}
+      docker-layer-caching-${{ github.workflow }}-${{ github.head_ref || github.ref }}-${{ github.event_name }}-
+      docker-layer-caching-${{ github.workflow }}-${{ github.head_ref || github.ref }}-
+      docker-layer-caching-${{ github.workflow }}-
+      docker-layer-caching-
   concurrency:
     description: The number of concurrency when restoring and saving layers
     required: true
-    default: '4'
+    default: "4"
   skip-save:
     description: Skip saving layers in the post step
     required: false
-    default: 'false'
+    default: "false"
   filter:
     description: A docker cli filter for which images to save
     required: false
-
-
+  pull:
+    description: "Always attempt to pull all referenced images"
+    required: false
+    default: "false"
+  push:
+    description: "Push is a shorthand for --output=type=registry"
+    required: false
+    default: "false"
+  default-registry:
+    description: "The default registry to use when pushing images"
+    required: false
+    default: "ghcr.io"
 runs:
-  using: node12
+  using: node16
   main: dist/restore/index.js
   post: dist/save/index.js

@@ -1,10 +1,10 @@
 # Custom Ignores
 .docker_images
 junit.xml
-
+.yarn/cache
 
 __tests__/runner/*
-
+/.github/scripts/volumes
 node_modules/
 lib/
 
@@ -76,6 +76,7 @@ typings/
 # dotenv environment variables file
 .env
 .env.test
+.env.secrets
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache

@@ -1,0 +1,7 @@
+{
+	"auths": {
+		"https://ghcr.io/v2/": {
+			"auth": "xxxxxxxxxxxxxxx"
+		}
+	}
+}

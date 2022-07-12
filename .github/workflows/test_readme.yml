@@ -1,11 +1,11 @@
-name: Readme Test
+name: Run Docker Caching Test
 
 on:
   push:
-    branches:
-      - master
-  schedule:
-    - cron: 0 0 */3 * *
+  #   branches:
+  #     - master
+  # schedule:
+  #   - cron: 0 0 */3 * *
 
 defaults:
   run:
@@ -13,12 +13,18 @@ defaults:
 
 jobs:
   build:
+    permissions:
+      packages: write
+      contents: read
+      actions: read
+
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Output matrix
         id: set_matrix
-        uses: actions/github-script@v2
+        uses: actions/github-script@v3
         with:
           script: |
             return {
@@ -34,8 +40,8 @@ jobs:
               include: [
                 {
                   inspect_image: 'test_project_scratch',
-                  prepare_command: 'docker-compose -f test_project/docker-compose.yml -p test_project pull',
-                  build_command: 'docker-compose -f test_project/docker-compose.yml -p test_project build',
+                  prepare_command: 'docker-compose -f ./action-docker-layer-caching/test_project/docker-compose.yml -p test_project pull',
+                  build_command: 'docker-compose -f ./action-docker-layer-caching/test_project/docker-compose.yml -p test_project build',
                 }, {
                   inspect_image: 'hello-world',
                   prepare_command: ':',
@@ -43,7 +49,7 @@ jobs:
                 }, {
                   inspect_image: 'nothing',
                   os: 'ubuntu-latest',
-                  prepare_command: 'docker tag node:12 nothing',
+                  prepare_command: 'docker tag node:16-alpine nothing',
                   build_command: ':',
                 }, {
                   inspect_image: 'nothing',
@@ -73,11 +79,15 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v2
-
+      - uses: actions/checkout@v3
+        with:
+          path: action-docker-layer-caching
+      - name: Enable buildx
+        run: |
+          docker buildx install
       - run: ${{ matrix.prepare_command }}
 
-      - uses: satackey/action-docker-layer-caching@master-release
+      - uses: ./action-docker-layer-caching
         with:
           key: docker-layer-caching-${{ github.workflow }}-${{ matrix.os }}-${{ matrix.inspect_image }}-sha:${{ github.sha }}-{hash}
           restore-keys: ''
@@ -91,11 +101,15 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v2
-
+      - uses: actions/checkout@v3
+        with:
+          path: action-docker-layer-caching
+      - name: Enable buildx
+        run: |
+          docker buildx install
       - run: ${{ matrix.prepare_command }}
 
-      - uses: satackey/action-docker-layer-caching@master-release
+      - uses: ./action-docker-layer-caching
         with:
           key: never-restored-docker-layer-caching-${{ github.workflow }}-${{ matrix.os }}-${{ matrix.inspect_image }}-sha:${{ github.sha }}-{hash}
           restore-keys: docker-layer-caching-${{ github.workflow }}-${{ matrix.os }}-${{ matrix.inspect_image }}-sha:${{ github.sha }}-

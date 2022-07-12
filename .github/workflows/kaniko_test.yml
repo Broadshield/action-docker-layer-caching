@@ -1,0 +1,135 @@
+name: "Kaniko Test"
+on:
+  push:
+jobs:
+  kaniko-test:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+      actions: read
+    env:
+      IMAGE_REGISTRY: ${{ inputs.registry || 'ghcr.io' }}
+      IMAGE_REGISTRY_USERNAME: ${{ inputs.registry_username || '$' }}
+      IMAGE_REGISTRY_PASSWORD: ${{ inputs.registry_password || github.token }}
+      CACHE_IMAGE_REGISTRY: ${{ inputs.cache_image_registry  }}
+      IMAGE_DESTINATION: ${{ inputs.image_destination }}
+      DOCKERFILE_PATH: ${{ inputs.dockerfile || 'action-docker-layer-caching/test_project/Dockerfile' }}
+
+    steps:
+      - name: Get the Repo Name
+        id: repo
+        shell: bash
+        run: |
+          echo "::set-output name=name::$(basename "${GITHUB_REPOSITORY}")"
+      - uses: actions/checkout@v3
+        with:
+          path: ${{ github.workspace }}/${{ steps.repo.outputs.name }}
+      - name: Set Up Environment
+        env:
+          SOURCE_REPO: ${{ github.workspace }}/${{ steps.repo.outputs.name }}
+        run: |
+          echo "${IMAGE_REGISTRY_PASSWORD}" | docker login ghcr.io -u ${IMAGE_REGISTRY_USERNAME} --password-stdin
+          IMAGE_REGISTRY="${IMAGE_REGISTRY%/}/"
+          echo "IMAGE_REGISTRY=${IMAGE_REGISTRY}" >> "${GITHUB_ENV}"
+          KANIKO_CONFIG_PATH="${SOURCE_REPO}/.github/kaniko/config.json"
+          echo "KANIKO_CONFIG_PATH=${KANIKO_CONFIG_PATH}" >> "${GITHUB_ENV}"
+          cp -f ~/.docker/config.json "${KANIKO_CONFIG_PATH}"
+          if [[ -z ${CACHE_IMAGE_REGISTRY} ]] && [[ "${IMAGE_REGISTRY}" == *"ghcr.io"* ]]; then
+            CACHE_IMAGE_REGISTRY="${IMAGE_REGISTRY}${GITHUB_REPOSITORY}/cache"
+          fi
+
+          echo "CACHE_IMAGE_REGISTRY=$(tr '[:upper:]' '[:lower:]' <<<"${CACHE_IMAGE_REGISTRY}")" >> "${GITHUB_ENV}"
+          echo "IMAGE_ID=$(tr '[:upper:]' '[:lower:]' <<<"${IMAGE_REGISTRY}${GITHUB_REPOSITORY}")" >> "${GITHUB_ENV}"
+      - name: Create Cache Dir
+        id: cache
+        run: |
+          mkdir -p cache
+          chmod -R 777 cache
+          echo "::set-output name=dir::$(pwd)/cache"
+      - name: pull executor
+        run: |
+          docker pull --quiet gcr.io/kaniko-project/executor:latest
+      - name: Cache Kaniko Layers
+        id: cache-kaniko
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.cache.outputs.dir }}
+          key: ${{ runner.os }}-kaniko-${{env.IMAGE_ID}}-${{github.sha}}
+          restore-keys: |
+            ${{ runner.os }}-kaniko-${{env.IMAGE_ID}}-${{github.sha}}
+            ${{ runner.os }}-kaniko-${{env.IMAGE_ID}}-
+            ${{ runner.os }}-kaniko-
+
+      - name: Run Build 1
+        shell: bash
+        run: |
+          docker run --rm \
+            -v "${KANIKO_CONFIG_PATH}":/kaniko/.docker/config.json:ro \
+            -v $(pwd):/workspace \
+            -v "${{ steps.cache.outputs.dir }}:/cache:rw" \
+            gcr.io/kaniko-project/executor:latest \
+            --dockerfile="/workspace/${DOCKERFILE_PATH}" \
+            --use-new-run \
+            --cache-copy-layers \
+            --cache=true \
+            --cache-dir=/cache \
+            --cache-repo="${CACHE_IMAGE_REGISTRY}" \
+            --destination="${IMAGE_ID}:${GITHUB_SHA}" \
+            --context "dir:///workspace/$(dirname "${DOCKERFILE_PATH}")"
+
+      - name: Run Build 3
+        shell: bash
+        run: |
+          docker run --rm \
+            -v "${KANIKO_CONFIG_PATH}":/kaniko/.docker/config.json:ro \
+            -v $(pwd):/workspace \
+            -v "${{ steps.cache.outputs.dir }}:/cache:rw" \
+            gcr.io/kaniko-project/executor:latest \
+            --dockerfile="/workspace/${DOCKERFILE_PATH}" \
+            --use-new-run \
+            --cache-copy-layers \
+            --cache=true \
+            --cache-dir=/cache \
+            --destination="${IMAGE_ID}:${GITHUB_SHA}" \
+            --context "dir:///workspace/$(dirname "${DOCKERFILE_PATH}")"
+
+      - name: Run Build 3
+        shell: bash
+        run: |
+          DOCKERFILE_PATH="${DOCKERFILE_PATH}.ubuntu"
+          docker run --rm \
+            -v "${KANIKO_CONFIG_PATH}":/kaniko/.docker/config.json:ro \
+            -v $(pwd):/workspace:rw \
+            -v "${{ steps.cache.outputs.dir }}:/cache:rw" \
+            gcr.io/kaniko-project/executor:latest \
+            --dockerfile="/workspace/${DOCKERFILE_PATH}" \
+            --use-new-run \
+            --cache=true \
+            --cache-copy-layers \
+            --cache-dir=/cache \
+            --cache-repo="${CACHE_IMAGE_REGISTRY}" \
+            --destination="${IMAGE_ID}:ubuntu_${GITHUB_SHA}" \
+            --context "dir:///workspace/$(dirname "${DOCKERFILE_PATH}")"
+
+      - name: Run Build 4
+        shell: bash
+        run: |
+          DOCKERFILE_PATH="${DOCKERFILE_PATH}.ubuntu"
+          docker run --rm \
+            -v "${KANIKO_CONFIG_PATH}":/kaniko/.docker/config.json:ro \
+            -v $(pwd):/workspace:rw \
+            -v "${{ steps.cache.outputs.dir }}:/cache:rw" \
+            gcr.io/kaniko-project/executor:latest \
+            --dockerfile="/workspace/${DOCKERFILE_PATH}" \
+            --use-new-run \
+            --cache=true \
+            --cache-copy-layers \
+            --cache-dir=/cache \
+            --destination="${IMAGE_ID}:ubuntu_${GITHUB_SHA}" \
+            --context "dir:///workspace/$(dirname "${DOCKERFILE_PATH}")"
+      - name: Check Filesystem Cache
+        shell: bash
+        run: |
+          ls -lah
+          ls -lah cache

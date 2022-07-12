@@ -1,6 +1,6 @@
 {
   "name": "action-docker-layer-cache",
-  "version": "0.0.0",
+  "version": "0.0.12-0",
   "main": "dist/restore/index.js",
   "private": true,
   "repository": {
@@ -10,53 +10,92 @@
   "author": "satackey <21271711+satackey@users.noreply.github.com>",
   "license": "MIT",
   "dependencies": {
-    "@actions/cache": "^1.0.6",
-    "@actions/core": "^1.2.6",
-    "@actions/exec": "^1.0.4",
-    "@types/recursive-readdir": "^2.2.0",
+    "@actions/cache": "^3.0.0",
+    "@actions/core": "^1.9.0",
+    "@actions/exec": "^1.1.1",
+    "@actions/github": "^5.0.3",
+    "@actions/http-client": "^2.0.1",
+    "@actions/tool-cache": "^2.0.1",
+    "@types/recursive-readdir": "^2.2.1",
     "actions-exec-listener": "0.1.0",
+    "ansi-colors": "^4.1.3",
     "crypto": "^1.0.1",
-    "native-promise-pool": "^3.16.0",
+    "csv-parse": "^5.2.2",
+    "handlebars": "^4.7.7",
+    "native-promise-pool": "^3.19.0",
     "recursive-readdir": "^2.2.2",
-    "string-format": "^2.0.0"
+    "string-format": "^2.0.0",
+    "tmp": "^0.2.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.13.8",
-    "@tsconfig/node12": "^1.0.7",
-    "@types/jest": "^26.0.20",
+    "@babel/core": "^7.18.6",
+    "@types/jest": "^28.1.4",
     "@types/nock": "^11.1.0",
-    "@types/node": "^14.14.20",
+    "@types/node": "^18.0.1",
+    "@types/rimraf": "^3",
     "@types/string-format": "^2.0.0",
-    "@typescript-eslint/parser": "^4.12.0",
-    "@vercel/ncc": "^0.27.0",
-    "eslint": "^7.21.0",
-    "eslint-plugin-github": "^4.1.2",
-    "eslint-plugin-import": "^2.22.1",
-    "eslint-plugin-jest": "^24.1.3",
-    "eslint-plugin-prettier": "^3.3.1",
+    "@types/tmp": "^0.2.3",
+    "@typescript-eslint/eslint-plugin": "^5.30.5",
+    "@typescript-eslint/parser": "^5.30.5",
+    "@typescript-eslint/typescript-estree": "^5.30.5",
+    "@vercel/ncc": "^0.34.0",
+    "dotenv": "^16.0.1",
+    "esbuild": "^0.14.48",
+    "eslint": "^8.19.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-config-bevry": "^3.27.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-formatter-codeframe": "^7.32.1",
+    "eslint-plugin-github": "^4.3.6",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-jest": "^26.5.3",
+    "eslint-plugin-no-use-extend-native": "^0.5.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-optimize-regex": "^1.2.1",
+    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-security": "^1.5.0",
     "eslint-plugin-simple-import-sort": "^7.0.0",
-    "husky": "4",
-    "jest": "^26.6.3",
-    "jest-circus": "^26.6.3",
-    "jest-junit": "^12.0.0",
-    "js-yaml": "^4.0.0",
-    "lint-staged": "^10.5.4",
-    "nock": "^13.0.11",
-    "prettier": "^2.2.1",
-    "ts-jest": "^26.4.4",
-    "ts-node": "^9.1.1",
-    "ttypescript": "^1.5.12",
-    "typescript": "^4.2.3"
+    "eslint-plugin-sonarjs": "^0.13.0",
+    "eslint-plugin-unicorn": "^43.0.0",
+    "husky": "8",
+    "jest": "^28.1.2",
+    "jest-circus": "^28.1.2",
+    "jest-junit": "^14.0.0",
+    "js-yaml": "^4.1.0",
+    "lint-staged": "^13.0.3",
+    "make-dir": "^3.1.0",
+    "nock": "^13.2.8",
+    "prettier": "^2.7.1",
+    "prettier-plugin-package": "^1.3.0",
+    "pretty-quick": "^3.1.3",
+    "rimraf": "^3.0.2",
+    "ts-jest": "^28.0.5",
+    "ts-node": "^10.8.2",
+    "ttypescript": "^1.5.13",
+    "typescript": "^4.7.4",
+    "typescript-eslint-language-service": "^5.0.0"
   },
   "scripts": {
     "test": "tsc --noEmit && NODE_ENV=testing jest --coverage",
+    "husky-run": "echo \"${*}\"",
+    "test:act": "act -v",
+    "current-version": "echo \"${npm_package_version}\"",
     "test-ci": "tsc --noEmit && NODE_ENV=testing jest --ci --reporters=default --reporters=jest-junit",
     "format": "prettier --write src/ .github/ __tests__/",
-    "format-check": "prettier --check src/**/*.ts",
-    "lint": "eslint --fix **/*.ts --cache",
-    "build": "rm -rf ./dist;tsc && ncc build -o dist/restore src/restore.ts && ncc build -o dist/save src/save.ts",
+    "format-check": "prettier --check \"src/**/*.ts\" \"__tests__/**/*.ts\"",
+    "lint": "eslint --fix \"src/**/*.ts\" \"__tests__/**/*.ts\"",
+    "build:save": "yarn exec esbuild src/save.ts --bundle --outdir=dist/save/ --platform=node --target=node16.10 --sourcemap --format=cjs",
+    "build:restore": "yarn exec esbuild src/restore.ts --bundle --outdir=dist/restore/ --platform=node --target=node16.10 --sourcemap --format=cjs",
+    "build": "yarn build:save && yarn build:restore",
+    "build:ncc": "rimraf ./dist;tsc && ncc build -o dist/restore src/restore.ts && ncc build -o dist/save src/save.ts",
     "release": "yarn run format && yarn run lint && yarn run build && git add -f dist",
     "all": "yarn run build && yarn run format && yarn run lint && git add -f dist && yarn test"
+  },
+  "engines": {
+    "node": ">=16.10.0"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "keywords": [
     "actions",
@@ -65,15 +104,6 @@
     "docker",
     "containers"
   ],
-  "jest": {
-    "testPathIgnorePatterns": [
-      "/helpers/",
-      "/node_modules/"
-    ],
-    "coveragePathIgnorePatterns": [
-      "/node_modules/"
-    ]
-  },
   "jest-junit": {
     "suiteNameTemplate": "{filepath}",
     "classNameTemplate": "{classname}",
@@ -92,5 +122,7 @@
     "hooks": {
       "pre-commit": "lint-staged;yarn build;git add dist"
     }
-  }
+  },
+  "packageManager": "yarn@3.2.1",
+  "stableVersion": "0.0.11"
 }
