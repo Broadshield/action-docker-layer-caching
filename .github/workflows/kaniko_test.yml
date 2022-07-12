@@ -41,18 +41,17 @@ jobs:
           fi
           echo "CACHE_IMAGE_REGISTRY=$(tr '[:upper:]' '[:lower:]' <<<"${CACHE_IMAGE_REGISTRY}")" >> "${GITHUB_ENV}"
           echo "IMAGE_ID=$(tr '[:upper:]' '[:lower:]' <<<"${IMAGE_REGISTRY}${GITHUB_REPOSITORY}")" >> "${GITHUB_ENV}"
-      - name: Warm up Kaniko
-        if: true
-        shell: bash
-        continue-on-error: true
-        run: |
-          docker run --rm \
-            -v $(pwd):/workspace \
-            gcr.io/kaniko-project/warmer:latest \
-            --cache-copy-layers \
-            --cache-dir=/workspace/cache \
-            --cache-repo="${CACHE_IMAGE_REGISTRY}" \
-            --image=ubuntu
+      - name: Cache Kaniko Layers
+        id: cache-kaniko
+        uses: actions/cache@v3
+        with:
+          path: ${{ github.workspace }}/cache
+          key: ${{ runner.os }}-kaniko-${{env.IMAGE_ID}}-${{github.sha}}
+          restore-keys: |
+            ${{ runner.os }}-kaniko-${{env.IMAGE_ID}}-${{github.sha}}
+            ${{ runner.os }}-kaniko-${{env.IMAGE_ID}}-
+            ${{ runner.os }}-kaniko-
+
       - name: Run Build
         shell: bash
         run: |
@@ -63,7 +62,6 @@ jobs:
             --dockerfile="/workspace/${DOCKERFILE_PATH}" \
             --use-new-run \
             --cache \
-            --cache-copy-layers \
             --cache-dir=/workspace/cache \
             --cache-repo="${CACHE_IMAGE_REGISTRY}" \
             --destination="${IMAGE_ID}:${GITHUB_SHA}" \
